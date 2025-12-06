@@ -1,0 +1,476 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>App Nutri Check-in</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    body {
+      margin: 0;
+      background: #f5f5f7;
+    }
+    .app-container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+    .card {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.06);
+    }
+    h1, h2, h3 {
+      margin-top: 0;
+    }
+    label {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    input, select, textarea, button {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      font-size: 14px;
+    }
+    button {
+      cursor: pointer;
+      border: none;
+      font-weight: 600;
+    }
+    .btn-primary {
+      background: #2563eb;
+      color: #fff;
+    }
+    .btn-secondary {
+      background: #e5e7eb;
+      color: #111827;
+    }
+    .btn-small {
+      width: auto;
+      padding: 6px 10px;
+      margin-right: 4px;
+      font-size: 12px;
+      border-radius: 999px;
+    }
+    .flex {
+      display: flex;
+      gap: 8px;
+    }
+    .flex-between {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      background: #eef2ff;
+      color: #4f46e5;
+      margin-left: 8px;
+    }
+    .list-item {
+      padding: 8px 0;
+      border-bottom: 1px solid #eee;
+    }
+    .list-item:last-child {
+      border-bottom: none;
+    }
+    .muted {
+      font-size: 12px;
+      color: #6b7280;
+    }
+    @media (max-width: 600px) {
+      .flex {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- LOGIN -->
+    <div id="login-view" class="card">
+      <h1>Login</h1>
+      <p class="muted">
+        Nutri padrão já criado: <b>nutri@example.com</b> / senha <b>123456</b>
+      </p>
+      <form id="login-form">
+        <label for="login-email">E-mail</label>
+        <input type="email" id="login-email" required />
+
+        <label for="login-password">Senha</label>
+        <input type="password" id="login-password" required />
+
+        <button type="submit" class="btn-primary">Entrar</button>
+      </form>
+    </div>
+
+    <!-- DASHBOARD NUTRICIONISTA -->
+    <div id="nutri-view" class="card" style="display:none;">
+      <div class="flex-between">
+        <h1>Painel do Nutricionista</h1>
+        <div>
+          <span id="nutri-name"></span>
+          <button class="btn-small btn-secondary" onclick="logout()">Sair</button>
+        </div>
+      </div>
+
+      <div class="card" style="margin: 8px 0; background:#eff6ff;">
+        <h3>Cadastrar novo paciente</h3>
+        <form id="new-patient-form">
+          <label>Nome</label>
+          <input type="text" id="np-name" required />
+
+          <label>E-mail (login do paciente)</label>
+          <input type="email" id="np-email" required />
+
+          <label>Senha (para o paciente)</label>
+          <input type="text" id="np-password" required value="123456" />
+
+          <button type="submit" class="btn-primary">Criar paciente</button>
+        </form>
+      </div>
+
+      <div class="card" style="margin: 8px 0;">
+        <div class="flex-between">
+          <h3>Pacientes</h3>
+          <button class="btn-small btn-secondary" onclick="loadPatients()">Atualizar</button>
+        </div>
+        <div id="patient-list"></div>
+      </div>
+
+      <div class="card" id="nutri-patient-detail" style="margin:8px 0; display:none;">
+        <div class="flex-between">
+          <h3 id="npd-name">Paciente</h3>
+          <button class="btn-small btn-secondary" onclick="closePatientDetail()">Fechar</button>
+        </div>
+        <div id="npd-info"></div>
+        <h4>Check-ins</h4>
+        <div id="npd-checkins"></div>
+      </div>
+    </div>
+
+    <!-- DASHBOARD PACIENTE -->
+    <div id="paciente-view" class="card" style="display:none;">
+      <div class="flex-between">
+        <h1>App do Paciente</h1>
+        <button class="btn-small btn-secondary" onclick="logout()">Sair</button>
+      </div>
+      <p id="paciente-name"></p>
+
+      <div class="card" style="margin: 8px 0; background:#ecfdf5;">
+        <h3>Check-in da Semana</h3>
+        <form id="checkin-form">
+          <label>Peso atual (kg)</label>
+          <input type="number" step="0.1" id="ci-weight" />
+
+          <label>Qualidade do sono (1 a 5)</label>
+          <select id="ci-sleep">
+            <option value="">Selecione</option>
+            <option value="1">1 - péssimo</option>
+            <option value="2">2 - ruim</option>
+            <option value="3">3 - ok</option>
+            <option value="4">4 - bom</option>
+            <option value="5">5 - excelente</option>
+          </select>
+
+          <label>Fome / Apetite (1 a 5)</label>
+          <select id="ci-hunger">
+            <option value="">Selecione</option>
+            <option value="1">1 - quase nenhuma</option>
+            <option value="2">2 - baixa</option>
+            <option value="3">3 - moderada</option>
+            <option value="4">4 - alta</option>
+            <option value="5">5 - muito alta / compulsiva</option>
+          </select>
+
+          <label>Treino (quantidade e percepção da semana)</label>
+          <textarea id="ci-training" rows="2" placeholder="Ex: 5 treinos, força boa, pump moderado"></textarea>
+
+          <label>Adesão à dieta (%)</label>
+          <input type="number" id="ci-adherence" min="0" max="100" placeholder="Ex: 85" />
+
+          <label>Observações gerais</label>
+          <textarea id="ci-notes" rows="3" placeholder="Sono, estresse, digestão, libido, retenção, etc."></textarea>
+
+          <button type="submit" class="btn-primary">Enviar check-in</button>
+        </form>
+      </div>
+
+      <div class="card" style="margin: 8px 0;">
+        <h3>Histórico de check-ins</h3>
+        <div id="paciente-checkins"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = '';
+
+    let currentUser = null; // será carregado do localStorage
+    let selectedPatientId = null;
+
+    function saveUserToLocalStorage(user) {
+      localStorage.setItem('currentUser', JSON.stringify(user));
+    }
+
+    function loadUserFromLocalStorage() {
+      const raw = localStorage.getItem('currentUser');
+      if (!raw) return null;
+      try {
+        return JSON.parse(raw);
+      } catch {
+        return null;
+      }
+    }
+
+    function showView(view) {
+      document.getElementById('login-view').style.display = 'none';
+      document.getElementById('nutri-view').style.display = 'none';
+      document.getElementById('paciente-view').style.display = 'none';
+
+      if (view === 'login') {
+        document.getElementById('login-view').style.display = 'block';
+      } else if (view === 'nutri') {
+        document.getElementById('nutri-view').style.display = 'block';
+      } else if (view === 'paciente') {
+        document.getElementById('paciente-view').style.display = 'block';
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem('currentUser');
+      currentUser = null;
+      showView('login');
+    }
+
+    async function login(email, password) {
+      const res = await fetch(API_BASE + '/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        alert(error.error || 'Erro ao fazer login');
+        return;
+      }
+
+      const data = await res.json();
+      currentUser = data.user;
+      saveUserToLocalStorage(currentUser);
+      initApp();
+    }
+
+    async function loadPatients() {
+      if (!currentUser) return;
+      const res = await fetch(API_BASE + '/api/patients/' + currentUser.id);
+      const data = await res.json();
+      const container = document.getElementById('patient-list');
+      container.innerHTML = '';
+
+      if (!data.patients || data.patients.length === 0) {
+        container.innerHTML = '<p class="muted">Nenhum paciente cadastrado ainda.</p>';
+        return;
+      }
+
+      data.patients.forEach(p => {
+        const div = document.createElement('div');
+        div.className = 'list-item flex-between';
+        div.innerHTML = `
+          <div>
+            <strong>${p.name}</strong><br/>
+            <span class="muted">ID: ${p.id}</span>
+          </div>
+          <div>
+            <button class="btn-small btn-primary" onclick="openPatientDetail('${p.id}', '${p.name}')">Ver</button>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    async function openPatientDetail(patientId, name) {
+      selectedPatientId = patientId;
+      document.getElementById('nutri-patient-detail').style.display = 'block';
+      document.getElementById('npd-name').innerText = name;
+      document.getElementById('npd-info').innerHTML = `<p class="muted">ID do paciente: ${patientId}</p>`;
+
+      const res = await fetch(API_BASE + '/api/checkins/' + patientId);
+      const data = await res.json();
+      const container = document.getElementById('npd-checkins');
+      container.innerHTML = '';
+
+      if (!data.checkins || data.checkins.length === 0) {
+        container.innerHTML = '<p class="muted">Nenhum check-in enviado ainda.</p>';
+        return;
+      }
+
+      data.checkins.forEach(c => {
+        const div = document.createElement('div');
+        div.className = 'list-item';
+        div.innerHTML = `
+          <strong>${c.date}</strong><br/>
+          <span class="muted">Peso: ${c.weight || '-'} kg | Sono: ${c.sleep || '-'} | Fome: ${c.hunger || '-'}</span><br/>
+          <span class="muted">Adesão: ${c.adherence || '-'}%</span><br/>
+          <span class="muted">Treino: ${c.training || '-'}</span><br/>
+          <span>${c.notes || ''}</span>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function closePatientDetail() {
+      selectedPatientId = null;
+      document.getElementById('nutri-patient-detail').style.display = 'none';
+    }
+
+    async function createPatient(name, email, password) {
+      const res = await fetch(API_BASE + '/api/register-patient', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          email,
+          password,
+          nutriId: currentUser.id
+        })
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        alert(error.error || 'Erro ao cadastrar paciente');
+        return;
+      }
+
+      await res.json();
+      alert('Paciente cadastrado com sucesso!');
+      loadPatients();
+    }
+
+    async function loadPacienteCheckins(patientId) {
+      const res = await fetch(API_BASE + '/api/checkins/' + patientId);
+      const data = await res.json();
+      const container = document.getElementById('paciente-checkins');
+      container.innerHTML = '';
+
+      if (!data.checkins || data.checkins.length === 0) {
+        container.innerHTML = '<p class="muted">Nenhum check-in ainda.</p>';
+        return;
+      }
+
+      data.checkins.forEach(c => {
+        const div = document.createElement('div');
+        div.className = 'list-item';
+        div.innerHTML = `
+          <strong>${c.date}</strong><br/>
+          <span class="muted">Peso: ${c.weight || '-'} kg | Sono: ${c.sleep || '-'} | Fome: ${c.hunger || '-'}</span><br/>
+          <span class="muted">Adesão: ${c.adherence || '-'}%</span><br/>
+          <span class="muted">Treino: ${c.training || '-'}</span><br/>
+          <span>${c.notes || ''}</span>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    async function createCheckin(patientId, payload) {
+      const res = await fetch(API_BASE + '/api/checkins', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patientId, ...payload })
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        alert(error.error || 'Erro ao enviar check-in');
+        return;
+      }
+
+      await res.json();
+      alert('Check-in enviado com sucesso!');
+      loadPacienteCheckins(patientId);
+    }
+
+    function initApp() {
+      if (!currentUser) {
+        showView('login');
+        return;
+      }
+
+      if (currentUser.role === 'nutri') {
+        document.getElementById('nutri-name').innerText = currentUser.name;
+        showView('nutri');
+        loadPatients();
+      } else if (currentUser.role === 'paciente') {
+        document.getElementById('paciente-name').innerText = 'Olá, ' + currentUser.name;
+        showView('paciente');
+        if (currentUser.patientId) {
+          loadPacienteCheckins(currentUser.patientId);
+        }
+      } else {
+        showView('login');
+      }
+    }
+
+    // ----------- EVENTOS -----------
+
+    document.getElementById('login-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value.trim();
+      const password = document.getElementById('login-password').value.trim();
+      login(email, password);
+    });
+
+    document.getElementById('new-patient-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      const name = document.getElementById('np-name').value.trim();
+      const email = document.getElementById('np-email').value.trim();
+      const password = document.getElementById('np-password').value.trim();
+      if (!name || !email || !password) {
+        alert('Preencha todos os campos');
+        return;
+      }
+      createPatient(name, email, password);
+      this.reset();
+    });
+
+    document.getElementById('checkin-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (!currentUser || !currentUser.patientId) {
+        alert('Paciente não identificado.');
+        return;
+      }
+      const payload = {
+        weight: document.getElementById('ci-weight').value,
+        sleep: document.getElementById('ci-sleep').value,
+        hunger: document.getElementById('ci-hunger').value,
+        training: document.getElementById('ci-training').value,
+        adherence: document.getElementById('ci-adherence').value,
+        notes: document.getElementById('ci-notes').value
+      };
+      createCheckin(currentUser.patientId, payload);
+      this.reset();
+    });
+
+    // Ao carregar a página, tenta restaurar sessão
+    window.addEventListener('load', () => {
+      currentUser = loadUserFromLocalStorage();
+      initApp();
+    });
+  </script>
+</body>
+</html>
